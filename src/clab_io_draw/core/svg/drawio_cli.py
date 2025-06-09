@@ -3,32 +3,17 @@ import os
 import shlex
 import shutil
 import subprocess
-import urllib.request
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
-DRAWIO_VERSION = "27.0.9"
-DRAWIO_URL = f"https://github.com/jgraph/drawio-desktop/releases/download/v{DRAWIO_VERSION}/drawio-x86_64-{DRAWIO_VERSION}.AppImage"
-
-
-def _download_drawio(appimage_path: Path) -> None:
-    logger.info("Downloading draw.io AppImage...")
-    urllib.request.urlretrieve(DRAWIO_URL, appimage_path)  # noqa: S310
-    appimage_path.chmod(0o755)
-
 
 def _ensure_drawio() -> Path:
+    """Return the draw.io binary path without downloading anything."""
     env_bin = os.environ.get("DRAWIO_BIN")
-    if env_bin and Path(env_bin).exists():
+    if env_bin:
         return Path(env_bin)
-
-    cache_dir = Path.home() / ".cache" / "clab_io_draw"
-    cache_dir.mkdir(parents=True, exist_ok=True)
-    appimage_path = cache_dir / "drawio.AppImage"
-    if not appimage_path.exists():
-        _download_drawio(appimage_path)
-    return appimage_path
+    return Path("drawio")
 
 
 def _install_plugin() -> None:
@@ -67,8 +52,10 @@ def export_svg_with_metadata(drawio_file: str, svg_file: str) -> None:
             drawio_file,
         ]
     else:
-        image = os.environ.get(
-            "CLAB_IO_DRAW_IMAGE", "clab-io-draw:latest"
+        image = os.environ.get("CLAB_IO_DRAW_IMAGE", "clab-io-draw:latest")
+        logger.info(
+            "Using Docker image %s with svgdata plugin (image will be pulled if missing)",
+            image,
         )
         drawio_path = Path(drawio_file).resolve()
         svg_path = Path(svg_file).resolve()

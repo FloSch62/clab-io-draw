@@ -53,6 +53,19 @@ COPY --from=builder /opt/venv /opt/venv
 COPY --from=builder /app/src /app/src
 COPY entrypoint.sh /app/
 
+# Setup plugin in multiple locations to ensure it's found
+RUN mkdir -p /root/.config/draw.io/plugins \
+    /opt/drawio-plugins \
+    /usr/share/drawio/plugins
+
+COPY --from=builder /app/src/clab_io_draw/core/svg/svgdata.js /root/.config/draw.io/plugins/svgdata.js
+COPY --from=builder /app/src/clab_io_draw/core/svg/svgdata.js /opt/drawio-plugins/svgdata.js
+COPY --from=builder /app/src/clab_io_draw/core/svg/svgdata.js /usr/share/drawio/plugins/svgdata.js
+
+# Create draw.io configuration file
+RUN echo '{"plugins":[{"url":"file:///root/.config/draw.io/plugins/svgdata.js","enabled":true}]}' > /root/.config/draw.io/config.json && \
+    echo '{"plugins":[{"url":"file:///opt/drawio-plugins/svgdata.js","enabled":true}]}' > /opt/drawio-config.json
+
 # Environment setup
 ENV PATH="/opt/venv/bin:${PATH}"
 ENV DRAWIO_BIN=/opt/drawio.AppImage
@@ -60,6 +73,8 @@ ENV APP_BASE_DIR=/app/src/clab_io_draw
 ENV TERM=xterm-256color
 ENV COLORTERM=truecolor
 ENV IN_DOCKER=true
+ENV HOME=/root
+ENV DRAWIO_CONFIG=/root/.config/draw.io/config.json
 
 RUN chmod +x /app/entrypoint.sh
 

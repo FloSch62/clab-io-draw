@@ -789,6 +789,11 @@ class DrawioSVGExporter:
 
     def _get_cell_bounds(self, cell: ET.Element, root_cell: ET.Element) -> Bounds | None:
         """Get bounds of a single cell"""
+        if cell.tag != "mxCell":
+            cell = cell.find("mxCell")
+            if cell is None:
+                return None
+
         geom_elem = cell.find("mxGeometry")
         if geom_elem is None:
             return None
@@ -919,6 +924,11 @@ class DrawioSVGExporter:
 
     def _is_cell_visible(self, cell: ET.Element, visible_layers: set[str]) -> bool:
         """Check if cell should be rendered"""
+        if cell.tag != "mxCell":
+            cell = cell.find("mxCell")
+            if cell is None:
+                return False
+
         # Check cell's own visibility
         if cell.get("visible") == "0":
             return False
@@ -952,19 +962,29 @@ class DrawioSVGExporter:
             if not cell_id:
                 continue
 
+            mx_elem = cell
+            if cell.tag != "mxCell":
+                mx_elem = cell.find("mxCell")
+                if mx_elem is None:
+                    continue
+                if mx_elem.get("id") is None:
+                    mx_elem.set("id", cell_id)
+                if mx_elem.get("value") is None and cell.get("label"):
+                    mx_elem.set("value", cell.get("label"))
+
             # Parse style
-            style = self._parse_style(cell.get("style", ""))
+            style = self._parse_style(mx_elem.get("style", ""))
 
             # Parse geometry
-            geom_elem = cell.find("mxGeometry")
-            geometry = self._parse_geometry(geom_elem) if geom_elem else None
+            geom_elem = mx_elem.find("mxGeometry")
+            geometry = self._parse_geometry(geom_elem) if geom_elem is not None else None
 
             # Create state
             state = CellState(
-                cell=cell,
+                cell=mx_elem,
                 style=style,
                 geometry=geometry,
-                visible=self._is_cell_visible(cell, visible_layers)
+                visible=self._is_cell_visible(mx_elem, visible_layers)
             )
 
             states[cell_id] = state

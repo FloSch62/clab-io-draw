@@ -12,6 +12,7 @@ import sys
 import urllib.parse
 import xml.etree.ElementTree as ET
 import zlib
+import re
 from dataclasses import dataclass, field
 from typing import Optional
 from urllib.request import urlopen
@@ -1101,12 +1102,19 @@ class DrawioSVGExporter:
             "preserveAspectRatio": "none"
         })
 
-        # Handle image embedding
-        if options.embed_images and not image_url.startswith("data:"):
-            embedded_url = self._embed_image(image_url)
-            image.set("{%s}href" % self.ns["xlink"], embedded_url)
-        else:
-            image.set("{%s}href" % self.ns["xlink"], image_url)
+        # Normalize inline data URIs that are base64 encoded without the
+        # required ";base64" hint. Some Draw.io exports omit the hint which
+        # causes browsers to treat the data as plain text rather than base64.
+        if image_url.startswith("data:image") and ";base64," not in image_url:
+            prefix, data = image_url.split(",", 1)
+            if re.fullmatch(r"[A-Za-z0-9+/=]+", data):
+                image_url = f"{prefix};base64,{data}"
+
+        # Handle image embedding for external resources
+        if options.embed_images and image_url.startswith("http"):
+            image_url = self._embed_image(image_url)
+
+        image.set("{%s}href" % self.ns["xlink"], image_url)
 
     def _embed_image(self, url: str) -> str:
         """Embed external image as data URL"""

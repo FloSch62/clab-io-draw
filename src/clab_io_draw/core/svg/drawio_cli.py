@@ -1,5 +1,6 @@
 import logging
 import os
+import shlex
 import shutil
 import subprocess
 import urllib.request
@@ -13,7 +14,7 @@ DRAWIO_URL = f"https://github.com/jgraph/drawio-desktop/releases/download/v{DRAW
 
 def _download_drawio(appimage_path: Path) -> None:
     logger.info("Downloading draw.io AppImage...")
-    urllib.request.urlretrieve(DRAWIO_URL, appimage_path)
+    urllib.request.urlretrieve(DRAWIO_URL, appimage_path)  # noqa: S310
     appimage_path.chmod(0o755)
 
 
@@ -41,26 +42,58 @@ def _install_plugin() -> None:
         logger.debug(f"Could not copy plugin: {exc}")
 
 
+def _in_docker() -> bool:
+    """Detect if running inside a Docker container."""
+    return Path("/.dockerenv").exists() or Path("/.containerenv").exists()
+
+
 def export_svg_with_metadata(drawio_file: str, svg_file: str) -> None:
     """Use draw.io CLI to export a diagram to SVG with metadata."""
     drawio_bin = _ensure_drawio()
     _install_plugin()
 
-    cmd = [
-        "xvfb-run",
-        str(drawio_bin),
-        "--appimage-extract-and-run",
-        "--no-sandbox",
-        "--export",
-        "--format",
-        "svg",
-        "--enable-plugins",
-        "--output",
-        svg_file,
-        drawio_file,
-    ]
-    logger.debug("Running: %s", " ".join(cmd))
-    result = subprocess.run(
+    if _in_docker():
+        cmd = [
+            "xvfb-run",
+            str(drawio_bin),
+            "--appimage-extract-and-run",
+            "--no-sandbox",
+            "--export",
+            "--format",
+            "svg",
+            "--enable-plugins",
+            "--output",
+            svg_file,
+            drawio_file,
+        ]
+    else:
+        image = os.environ.get(
+            "CLAB_IO_DRAW_IMAGE", "clab-io-draw:latest"
+        )
+        drawio_path = Path(drawio_file).resolve()
+        svg_path = Path(svg_file).resolve()
+
+        code = (
+            "from clab_io_draw.core.svg.drawio_cli import export_svg_with_metadata;"
+            f"export_svg_with_metadata('/input/{drawio_path.name}', '/output/{svg_path.name}')"
+        )
+        cmd = [
+            "docker",
+            "run",
+            "--rm",
+            "-v",
+            f"{drawio_path.parent}:/input",
+            "-v",
+            f"{svg_path.parent}:/output",
+            "--entrypoint",
+            "python",
+            image,
+            "-c",
+            code,
+        ]
+
+    logger.debug("Running: %s", " ".join(shlex.quote(part) for part in cmd))
+    result = subprocess.run(  # noqa: S603
         cmd,
         check=True,
         capture_output=True,

@@ -64,7 +64,11 @@ To get a full guide: [https://github.com/andymchugh/andrewbmchugh-flow-panel/blo
 ~~1. Open the generated draw.io diagram using the draw.io application or use the online version at [https://app.diagrams.net/?p=svgdata](https://app.diagrams.net/?p=svgdata).~~
 > [!IMPORTANT]
 > The svgdata plugin needs to be enabled
-> 
+>
+> If you run the `clab-io-draw` Docker image, this plugin is installed for you
+> automatically and the export is performed inside the container—no local
+> `xvfb-run` setup is required.
+>
 > ⚠️ Due to breaking changes in draw.io 26.0.x ([Issue #127](https://github.com/andymchugh/andrewbmchugh-flow-panel/issues/127)), please use draw.io desktop app version 25.x or lower
 
 > [!NOTE]

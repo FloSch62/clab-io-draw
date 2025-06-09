@@ -67,8 +67,13 @@ docker run -it -v "$(pwd)":/data ghcr.io/srl-labs/clab-io-draw -i lab-examples/b
 docker run -v "$(pwd)":/data ghcr.io/srl-labs/clab-io-draw -i output.drawio
 ```
 
-Replace `your_input_file.drawio` or `your_output_file.yaml` with the 
+Replace `your_input_file.drawio` or `your_output_file.yaml` with the
 actual file names in your environment.
+
+The container comes with the `svgdata` plugin pre-installed. When using the
+`-g` option to generate Grafana artifacts, the SVG export runs entirely inside
+the container—no `xvfb-run` on the host is needed and Docker isn't invoked
+from inside the container.
 
 ## Running locally
 

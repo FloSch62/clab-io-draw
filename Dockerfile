@@ -59,6 +59,7 @@ ENV DRAWIO_BIN=/opt/drawio.AppImage
 ENV APP_BASE_DIR=/app/src/clab_io_draw
 ENV TERM=xterm-256color
 ENV COLORTERM=truecolor
+ENV IN_DOCKER=true
 
 RUN chmod +x /app/entrypoint.sh
 

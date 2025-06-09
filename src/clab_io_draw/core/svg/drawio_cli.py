@@ -28,8 +28,14 @@ def _install_plugin() -> None:
 
 
 def _in_docker() -> bool:
-    """Detect if running inside a Docker container."""
-    return Path("/.dockerenv").exists() or Path("/.containerenv").exists()
+    """Detect if running inside a Docker container.
+
+    This relies on the ``IN_DOCKER`` environment variable, which is set in the
+    official Docker image. Any truthy value (``"1"``, ``"true"`` or ``"yes"``)
+    will trigger Docker mode.
+    """
+
+    return os.environ.get("IN_DOCKER", "").lower() in {"1", "true", "yes"}
 
 
 def export_svg_with_metadata(drawio_file: str, svg_file: str) -> None:
